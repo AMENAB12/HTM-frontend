@@ -23,6 +23,7 @@ interface FileState {
   addFile: (file: Omit<FileData, "id">) => string;
   updateFileStatus: (id: string, status: FileStatus, rowCount?: number) => void;
   setFiles: (files: FileData[]) => void;
+  removeFile: (id: string | number) => void;
 }
 
 type Store = AuthState & FileState;
@@ -51,6 +52,10 @@ export const useStore = create<Store>()(
           ),
         })),
       setFiles: (files: FileData[]) => set({ files }),
+      removeFile: (id: string | number) =>
+        set((state) => ({
+          files: state.files.filter((file) => file.id !== id),
+        })),
     }),
     {
       name: "htm-storage",

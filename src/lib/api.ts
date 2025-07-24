@@ -90,3 +90,20 @@ export async function getFiles(token: string): Promise<FileMetadata[]> {
     },
   });
 }
+
+export async function getFileById(fileId: number, token: string): Promise<FileMetadata> {
+  return apiRequest<FileMetadata>(`/files/${fileId}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+export async function deleteFile(fileId: number, token: string): Promise<{ message: string }> {
+  return apiRequest<{ message: string }>(`/files/${fileId}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
