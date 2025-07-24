@@ -1,14 +1,17 @@
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 export interface LoginResponse {
-  token: string;
+  access_token: string;
+  token_type: string;
+  message: string;
 }
 
 export interface FileMetadata {
-  fileName: string;
-  uploadTimestamp: string;
-  rowCount: number;
-  parquetPath: string;
+  id: number;
+  filename: string;
+  upload_timestamp: string;
+  row_count: number;
+  parquet_path: string;
   status: string;
 }
 
@@ -34,7 +37,11 @@ async function apiRequest<T>(
   });
 
   if (!response.ok) {
-    throw new ApiError(response.status, `API Error: ${response.statusText}`);
+    const errorData = await response.json().catch(() => ({}));
+    throw new ApiError(
+      response.status,
+      errorData.detail || `API Error: ${response.statusText}`
+    );
   }
 
   return response.json();
@@ -50,7 +57,10 @@ export async function login(
   });
 }
 
-export async function uploadFile(file: File, token: string): Promise<void> {
+export async function uploadFile(
+  file: File,
+  token: string
+): Promise<FileMetadata> {
   const formData = new FormData();
   formData.append("file", file);
 
@@ -63,11 +73,14 @@ export async function uploadFile(file: File, token: string): Promise<void> {
   });
 
   if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
     throw new ApiError(
       response.status,
-      `Upload failed: ${response.statusText}`
+      errorData.detail || `Upload failed: ${response.statusText}`
     );
   }
+
+  return response.json();
 }
 
 export async function getFiles(token: string): Promise<FileMetadata[]> {

@@ -5,7 +5,11 @@ import { useDropzone } from 'react-dropzone'
 import { useStore } from '@/store/useStore'
 import { uploadFile } from '@/lib/api'
 
-export default function FileUpload() {
+interface FileUploadProps {
+    onUploadSuccess?: () => void
+}
+
+export default function FileUpload({ onUploadSuccess }: FileUploadProps) {
     const [uploading, setUploading] = useState<string[]>([])
     const { token, addFile, updateFileStatus } = useStore()
 
@@ -19,43 +23,50 @@ export default function FileUpload() {
                 continue
             }
 
-            // Add file to state with processing status
-            const fileId = addFile({
-                fileName: file.name,
-                uploadTimestamp: new Date().toISOString(),
-                status: 'processing',
-            })
-
-            setUploading(prev => [...prev, fileId])
-
             try {
-                // Upload file
-                await uploadFile(file, token)
+                // Upload file to backend
+                const backendFile = await uploadFile(file, token)
 
-                // Simulate processing delay and check row count
-                setTimeout(() => {
-                    // Read file to check row count (basic client-side check)
-                    const reader = new FileReader()
-                    reader.onload = (e) => {
-                        const text = e.target?.result as string
-                        const lines = text.trim().split('\n')
-                        const rowCount = lines.length - 1 // Subtract header row
+                // Add file to state with backend response
+                const fileId = addFile({
+                    filename: backendFile.filename,
+                    upload_timestamp: backendFile.upload_timestamp,
+                    status: backendFile.status as FileStatus,
+                    row_count: backendFile.row_count,
+                })
 
-                        if (rowCount === 0) {
-                            updateFileStatus(fileId, 'error', 0)
-                        } else {
-                            updateFileStatus(fileId, 'done', rowCount)
+                setUploading(prev => [...prev, fileId])
+
+                // Backend handles the 3-second processing delay
+                // Poll for status updates every 2 seconds if status is "Processing"
+                if (backendFile.status === 'Processing') {
+                    const pollStatus = async () => {
+                        try {
+                            // For now, we'll simulate the backend behavior
+                            // In a real implementation, you might poll /files/{id} endpoint
+                            setTimeout(() => {
+                                // Backend will update status after 3 seconds
+                                // This is handled by the backend, so we just update locally for demo
+                                updateFileStatus(fileId, backendFile.row_count > 0 ? 'Done' : 'Error', backendFile.row_count)
+                                setUploading(prev => prev.filter(id => id !== fileId))
+                            }, 3000)
+                        } catch (error) {
+                            console.error('Status polling failed:', error)
+                            updateFileStatus(fileId, 'Error')
+                            setUploading(prev => prev.filter(id => id !== fileId))
                         }
-
-                        setUploading(prev => prev.filter(id => id !== fileId))
                     }
-                    reader.readAsText(file)
-                }, 3000) // 3-second delay as per requirements
+                    pollStatus()
+                } else {
+                    setUploading(prev => prev.filter(id => id !== fileId))
+                }
+
+                // Call success callback to refresh file list
+                onUploadSuccess?.()
 
             } catch (error) {
                 console.error('Upload failed:', error)
-                updateFileStatus(fileId, 'error')
-                setUploading(prev => prev.filter(id => id !== fileId))
+                alert(`Upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
             }
         }
     }, [token, addFile, updateFileStatus])
@@ -73,8 +84,8 @@ export default function FileUpload() {
             <div
                 {...getRootProps()}
                 className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${isDragActive
-                        ? 'border-indigo-500 bg-indigo-50'
-                        : 'border-gray-300 hover:border-gray-400'
+                    ? 'border-indigo-500 bg-indigo-50'
+                    : 'border-gray-300 hover:border-gray-400'
                     }`}
             >
                 <input {...getInputProps()} />

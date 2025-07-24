@@ -1,14 +1,14 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-export type FileStatus = "processing" | "error" | "done";
+export type FileStatus = "Processing" | "Error" | "Done";
 
 export interface FileData {
-  id: string;
-  fileName: string;
-  uploadTimestamp: string;
+  id: string | number;
+  filename: string;
+  upload_timestamp: string;
   status: FileStatus;
-  rowCount?: number;
+  row_count?: number;
 }
 
 interface AuthState {

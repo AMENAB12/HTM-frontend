@@ -18,8 +18,8 @@ export default function LoginForm() {
         setLoading(true)
 
         try {
-            const response = await login(username, password)
-            loginAction(response.token)
+                  const response = await login(username, password)
+      loginAction(response.access_token)
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Login failed')
         } finally {

@@ -5,13 +5,13 @@ import { format } from 'date-fns'
 
 function StatusBadge({ status }: { status: FileStatus }) {
     const styles = {
-        processing: 'bg-yellow-100 text-yellow-800',
-        error: 'bg-red-100 text-red-800',
-        done: 'bg-green-100 text-green-800',
+        Processing: 'bg-yellow-100 text-yellow-800',
+        Error: 'bg-red-100 text-red-800',
+        Done: 'bg-green-100 text-green-800',
     }
 
     const icons = {
-        processing: (
+        Processing: (
             <svg className="animate-spin -ml-1 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24">
                 <circle
                     className="opacity-25"
@@ -28,7 +28,7 @@ function StatusBadge({ status }: { status: FileStatus }) {
                 />
             </svg>
         ),
-        error: (
+        Error: (
             <svg className="mr-2 h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
                 <path
                     fillRule="evenodd"
@@ -37,7 +37,7 @@ function StatusBadge({ status }: { status: FileStatus }) {
                 />
             </svg>
         ),
-        done: (
+        Done: (
             <svg className="mr-2 h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
                 <path
                     fillRule="evenodd"
@@ -138,19 +138,19 @@ export default function FileList() {
                                             />
                                         </svg>
                                         <span className="text-sm font-medium text-gray-900">
-                                            {file.fileName}
+                                            {file.filename}
                                         </span>
                                     </div>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    {format(new Date(file.uploadTimestamp), 'MMM dd, yyyy HH:mm:ss')}
+                                    {format(new Date(file.upload_timestamp), 'MMM dd, yyyy HH:mm:ss')}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap">
                                     <StatusBadge status={file.status} />
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    {file.rowCount !== undefined ? (
-                                        <span className="font-medium">{file.rowCount}</span>
+                                    {file.row_count !== undefined ? (
+                                        <span className="font-medium">{file.row_count}</span>
                                     ) : (
                                         <span className="text-gray-400">-</span>
                                     )}
