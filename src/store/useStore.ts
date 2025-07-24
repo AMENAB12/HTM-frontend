@@ -9,6 +9,7 @@ export interface FileData {
   upload_timestamp: string;
   status: FileStatus;
   row_count?: number;
+  parquet_path?: string | null;
 }
 
 interface AuthState {

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useStore, type FileStatus, type FileData } from '@/store/useStore'
-import { deleteFile } from '@/lib/api'
+import { deleteFile, getDownloadUrl } from '@/lib/api'
 import { format } from 'date-fns'
 import FileDetailModal from './FileDetailModal'
 import { getTheme } from '@/lib/theme'
@@ -71,6 +71,7 @@ export default function FileList({ onFileSelect }: FileListProps) {
     const [selectedFileId, setSelectedFileId] = useState<number | null>(null)
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [deletingFiles, setDeletingFiles] = useState<Set<string | number>>(new Set())
+    const [downloadingFiles, setDownloadingFiles] = useState<Set<string | number>>(new Set())
 
     const currentTheme = getTheme(theme)
 
@@ -99,6 +100,36 @@ export default function FileList({ onFileSelect }: FileListProps) {
             alert(`Failed to delete file: ${error instanceof Error ? error.message : 'Unknown error'}`)
         } finally {
             setDeletingFiles(prev => {
+                const newSet = new Set(prev)
+                newSet.delete(fileId)
+                return newSet
+            })
+        }
+    }
+
+    const handleDownloadFile = async (fileId: number | string, format: 'csv' | 'parquet' = 'parquet') => {
+        if (!token) return
+
+        try {
+            setDownloadingFiles(prev => new Set(prev).add(fileId))
+            const downloadResponse = await getDownloadUrl(Number(fileId), token, {
+                format,
+                expiration_hours: 1
+            })
+
+            // Create a temporary link to trigger download
+            const link = document.createElement('a')
+            link.href = downloadResponse.download_url
+            link.download = downloadResponse.file_info.filename
+            link.target = '_blank'
+            document.body.appendChild(link)
+            link.click()
+            document.body.removeChild(link)
+        } catch (error) {
+            console.error('Failed to download file:', error)
+            alert(`Failed to download file: ${error instanceof Error ? error.message : 'Unknown error'}`)
+        } finally {
+            setDownloadingFiles(prev => {
                 const newSet = new Set(prev)
                 newSet.delete(fileId)
                 return newSet
@@ -173,6 +204,12 @@ export default function FileList({ onFileSelect }: FileListProps) {
                             </th>
                             <th
                                 scope="col"
+                                className={`px-6 py-4 text-left text-xs font-semibold ${currentTheme.text.muted} uppercase tracking-wider`}
+                            >
+                                Parquet Path
+                            </th>
+                            <th
+                                scope="col"
                                 className={`px-6 py-4 text-right text-xs font-semibold ${currentTheme.text.muted} uppercase tracking-wider`}
                             >
                                 Actions
@@ -222,6 +259,35 @@ export default function FileList({ onFileSelect }: FileListProps) {
                                         <span className={currentTheme.text.muted}>-</span>
                                     )}
                                 </td>
+                                <td className={`px-6 py-5 whitespace-nowrap text-sm ${currentTheme.text.secondary}`}>
+                                    {file.parquet_path ? (
+                                        <div className="flex items-center group">
+                                            <div className={`p-1 ${currentTheme.accents.success.light} rounded mr-2 group-hover:scale-110 transition-transform duration-200`}>
+                                                <svg className={`w-3 h-3 ${currentTheme.accents.success.text}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                                                </svg>
+                                            </div>
+                                            <span className={`font-mono text-xs ${currentTheme.text.primary} truncate max-w-32`} title={file.parquet_path}>
+                                                {file.parquet_path}
+                                            </span>
+                                        </div>
+                                    ) : file.status === 'Processing' ? (
+                                        <div className="flex items-center">
+                                            <svg className="animate-spin w-3 h-3 mr-2 text-yellow-500" fill="none" viewBox="0 0 24 24">
+                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                            </svg>
+                                            <span className={`text-xs ${currentTheme.text.muted} italic`}>Converting...</span>
+                                        </div>
+                                    ) : (
+                                        <div className="flex items-center">
+                                            <svg className={`w-3 h-3 mr-2 ${currentTheme.accents.danger.text}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                                            </svg>
+                                            <span className={`text-xs ${currentTheme.text.muted} italic`}>Not available</span>
+                                        </div>
+                                    )}
+                                </td>
                                 <td className="px-6 py-5 whitespace-nowrap text-right text-sm font-medium">
                                     <div className="flex justify-end space-x-3">
                                         <button
@@ -244,6 +310,35 @@ export default function FileList({ onFileSelect }: FileListProps) {
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                                                 </svg>
                                             </button>
+                                        )}
+                                        {file.status === 'Done' && file.parquet_path && (
+                                            <div className="flex space-x-1">
+                                                <button
+                                                    onClick={() => handleDownloadFile(file.id, 'parquet')}
+                                                    disabled={downloadingFiles.has(file.id)}
+                                                    className={`p-2 ${currentTheme.accents.info.light} ${currentTheme.accents.info.text} rounded-lg hover:shadow-md transition-all duration-200 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed ${currentTheme.accents.info.border}`}
+                                                    title="Download Parquet"
+                                                >
+                                                    {downloadingFiles.has(file.id) ? (
+                                                        <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                            <path className="opacity-75" fill="currentColor" d="m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                        </svg>
+                                                    ) : (
+                                                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                                        </svg>
+                                                    )}
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDownloadFile(file.id, 'csv')}
+                                                    disabled={downloadingFiles.has(file.id)}
+                                                    className={`p-1.5 ${currentTheme.accents.purple.light} ${currentTheme.accents.purple.text} rounded-md hover:shadow-md transition-all duration-200 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed text-xs`}
+                                                    title="Download CSV"
+                                                >
+                                                    CSV
+                                                </button>
+                                            </div>
                                         )}
                                         <button
                                             onClick={() => handleDeleteFile(file.id)}

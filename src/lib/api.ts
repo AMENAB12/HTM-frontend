@@ -51,10 +51,20 @@ export async function login(
   username: string,
   password: string
 ): Promise<LoginResponse> {
-  return apiRequest<LoginResponse>("/login", {
-    method: "POST",
-    body: JSON.stringify({ username, password }),
-  });
+  console.log('API login called with:', { username, password })
+  console.log('Base URL:', BASE_URL)
+  
+  try {
+    const response = await apiRequest<LoginResponse>("/login", {
+      method: "POST",
+      body: JSON.stringify({ username, password }),
+    });
+    console.log('API login successful:', response)
+    return response
+  } catch (error) {
+    console.error('API login failed:', error)
+    throw error
+  }
 }
 
 export async function uploadFile(
@@ -108,6 +118,45 @@ export async function deleteFile(
 ): Promise<{ message: string }> {
   return apiRequest<{ message: string }>(`/files/${fileId}`, {
     method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+export interface DownloadResponse {
+  download_url: string;
+  file_info: {
+    id: number;
+    filename: string;
+    format: string;
+    size_bytes: number;
+    size_mb: number;
+    rows: number;
+  };
+  url_info: {
+    expires_in_hours: number;
+    expires_in_seconds: number;
+    storage_type: string;
+    generated_at: string;
+  };
+}
+
+export async function getDownloadUrl(
+  fileId: number,
+  token: string,
+  options: { format?: "csv" | "parquet"; expiration_hours?: number } = {}
+): Promise<DownloadResponse> {
+  const params = new URLSearchParams();
+  if (options.format) params.set("format", options.format);
+  if (options.expiration_hours)
+    params.set("expiration_hours", options.expiration_hours.toString());
+
+  const url = params.toString()
+    ? `/files/${fileId}/download?${params}`
+    : `/files/${fileId}/download`;
+
+  return apiRequest<DownloadResponse>(url, {
     headers: {
       Authorization: `Bearer ${token}`,
     },

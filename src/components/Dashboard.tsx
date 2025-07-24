@@ -59,7 +59,8 @@ export default function Dashboard() {
                 filename: file.filename,
                 upload_timestamp: file.upload_timestamp,
                 status: file.status as FileData['status'],
-                row_count: file.row_count
+                row_count: file.row_count,
+                parquet_path: file.parquet_path
             }))
 
             setFiles(files)
