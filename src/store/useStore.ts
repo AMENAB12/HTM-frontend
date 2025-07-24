@@ -26,7 +26,12 @@ interface FileState {
   removeFile: (id: string | number) => void;
 }
 
-type Store = AuthState & FileState;
+interface ThemeState {
+  theme: "light" | "dark";
+  toggleTheme: () => void;
+}
+
+type Store = AuthState & FileState & ThemeState;
 
 export const useStore = create<Store>()(
   persist(
@@ -35,7 +40,7 @@ export const useStore = create<Store>()(
       isAuthenticated: false,
       token: null,
       login: (token: string) => set({ isAuthenticated: true, token }),
-      logout: () => set({ isAuthenticated: false, token: null, files: [] }),
+      logout: () => set({ isAuthenticated: false, token: null }),
 
       // File state
       files: [],
@@ -48,7 +53,13 @@ export const useStore = create<Store>()(
       updateFileStatus: (id: string, status: FileStatus, rowCount?: number) =>
         set((state) => ({
           files: state.files.map((file) =>
-            file.id === id ? { ...file, status, rowCount } : file
+            file.id === id
+              ? {
+                  ...file,
+                  status,
+                  ...(rowCount !== undefined && { row_count: rowCount }),
+                }
+              : file
           ),
         })),
       setFiles: (files: FileData[]) => set({ files }),
@@ -56,12 +67,20 @@ export const useStore = create<Store>()(
         set((state) => ({
           files: state.files.filter((file) => file.id !== id),
         })),
+
+      // Theme state
+      theme: "light",
+      toggleTheme: () =>
+        set((state) => ({
+          theme: state.theme === "light" ? "dark" : "light",
+        })),
     }),
     {
       name: "htm-storage",
       partialize: (state) => ({
         isAuthenticated: state.isAuthenticated,
         token: state.token,
+        theme: state.theme,
       }),
     }
   )
