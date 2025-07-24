@@ -27,7 +27,11 @@ A modern React frontend application built with Next.js and Zustand for managing 
 
 ## Installation
 
-1. Clone the repository
+1. **Clone and navigate to the project:**
+
+   ```bash
+   cd HTM-frontend
+   ```
 2. Install dependencies:
 
    ```bash
