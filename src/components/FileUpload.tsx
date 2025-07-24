@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from 'react'
 import { useDropzone } from 'react-dropzone'
-import { useStore } from '@/store/useStore'
+import { FileStatus, useStore } from '@/store/useStore'
 import { uploadFile } from '@/lib/api'
 
 interface FileUploadProps {
